@@ -51,13 +51,13 @@ def main(argv):
 		checksum = "N/A"
 		data = row.split()
 		if len(data) == 8:
-			if row.find("chukwa") == -1:
+			if row.find("chukwa") != -1:
 				interesting_file = False
-			if data[7].find(".") != -1:
+			if data[7].find(".") == -1:
 				interesting_file = False
-			if row.find("cksums") == -1:
+			if row.find("cksums") != -1:
 				interesting_file = False
-			if interesting_file:
+			if interesting_file :
 				filename = "/mnt/hadoop"+data[7]
 				checksum_file = "/mnt/hadoop/cksums"+data[7]
 				checksum = get_checksum(checksum_file)
