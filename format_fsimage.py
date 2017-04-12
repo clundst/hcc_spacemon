@@ -17,7 +17,7 @@ def get_checksum(file):
 			if line.find("CKSUM") != -1:
 				cksum_data = line.split(":")
 				if len(cksum_data) == 2:
-					print "cksum_data, length = ", cksum_data, len(cksum_data)
+					#print "cksum_data, length = ", cksum_data, len(cksum_data)
 					checksum = int(cksum_data[1])		
 				#print "line, cksum_data, length =", line, cksum_data, len(cksum_data)
 		cksum_file.close()
