@@ -4,7 +4,7 @@
 
 import os, sys, getopt
 from datetime import *
-
+from multiprocessing.dummy import Pool as ThreadPool
 # take the RAW fsimage given from hadoop 
 # -i <input image file>
 
