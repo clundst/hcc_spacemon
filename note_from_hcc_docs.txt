@@ -1,0 +1,58 @@
+The old way of doing storage dumps via fuse + find no longer work.  To accomplish a storage dump to upload via spacemon you need to process the hadoop offline image.  Currently spacemon runs are done on phedex.unl.edu in the ~cmsphedex/spacemon directory.
+
+ 
+
+1) Get the image dump off hadoop-name. 
+
+    hdfs oiv -i /hadoop-data1/scratch/dfs/name/current/fsimage_<####> -o /root/fsimage_DATEINFO.out
+
+There seems to be two image files present in that directory at any given time and you can pick the image of interest by specifying the <####>.  The name of the fsimage dump file is not really important at this point.  The image file has been a few gigs in the past.  Be careful with HD space in /root.
+
+2)  This image, although human readable, is not formatted correctly for Spacemon to parse.  (See LCG Consistency Check Formatting Rules for formatting help.)
+Basically spacemon and consistency checks need the file system parsed into:
+
+LFN (or PFN) | file size (bytes) | file creation date (epoch s) | checksum
+
+PFN in our case.
+
+Thus we need to a) translate the creation date to Unix epoch and b) see if we have the files checksum and put it inline.  There is a simple python script that I run against the fsimage to get this.  I move the fsimage to hadoop itself and then copy it to a local filesystem on phedex.unl.edu for the parsing run (and remove the file from hadoop-name).
+The script does live in git.  hcc_spacemon on github, run this script to create the dumpfile in the correct format.  BE WARNED, this script does a lot of FUSE I/O and takes more than a day.  A parallel version of the script should be easy to code but.....
+
+The python script needs two arguments, -i for the input file and -o for the output dump.  The name of output file IS important.  It needs to be in the form of "SpaceToken.creationTimeInEpochSec.txt e.g. NebraskaDump.1312201138.txt (or .xml)".  At this step the name can be anything, but when you try and upload it via spacemon it will fail so do the name now.
+
+
+    ./format_fsimage.py -i fsimage_Feb_11_2015.out -o dumpfile.1423752361.txt
+
+This should create a dumpfile with lines that look like:
+
+
+
+    /mnt/hadoop/user/uscms01/pnfs/unl.edu/data4/cms/store/user/hernan/GenericTTbar/140429_112330_crab_April_test_T2_US_Nebraska_4800_300_140429_1323/140429_112330/0000/step1_784.root  |  73478985  |  1398765120  |  1978849419
+    /mnt/hadoop/user/uscms01/pnfs/unl.edu/data4/cms/store/user/hernan/GenericTTbar/140429_112330_crab_April_test_T2_US_Nebraska_4800_300_140429_1323/140429_112330/0000/step1_786.root  |  77384811  |  1398767460  |  1800623172
+    /mnt/hadoop/user/uscms01/pnfs/unl.edu/data4/cms/store/user/hernan/GenericTTbar/140429_112330_crab_April_test_T2_US_Nebraska_4800_300_140429_1323/140429_112330/0000/step1_787.root  |  73132545  |  1398766020  |  841845290
+    /mnt/hadoop/user/uscms01/pnfs/unl.edu/data4/cms/store/user/hernan/GenericTTbar/140429_112330_crab_April_test_T2_US_Nebraska_4800_300_140429_1323/140429_112330/0000/step1_79.root  |  73335843  |  1399128660  |  3198362301
+    /mnt/hadoop/user/uscms01/pnfs/unl.edu/data4/cms/store/user/hernan/GenericTTbar/140429_112330_crab_April_test_T2_US_Nebraska_4800_300_140429_1323/140429_112330/0000/step1_790.root  |  72897433  |  1398767400  |  1096947862
+
+3) Days later, you'll remember that that stupid python parser is going and trying to make the dump file and you need to upload it.
+Spacemon uses some of the PhEDEx codebase so you'll have to use that machine or configure PhEDEx on another.  Set up the environment.  I do something like:
+
+    unset PERL5LIB
+
+    source ~/sw/slc6_amd64_gcc461/cms/PHEDEX/4.1.3-comp3/etc/profile.d/init.sh
+
+    export PHEDEX_ROOT=/grid_home/cmsphedex/spacemon/PHEDEX
+
+    export PERL5LIB=/grid_home/cmsphedex/spacemon/PHEDEX/perl_lib/:$PERL5LIB
+
+    export PATH=/grid_home/cmsphedex/spacemon/PHEDEX/Utilities/:/grid_home/cmsphedex/spacemon/PHEDEX/Utilities/:$PATH
+
+**** New version of spacemon in /grid_home/cmsphedex/new_spacemon/DMWMMON/SpaceMon/Utilities/spacemon
+**** Perhaps try using that.
+There is currently a script on phedex in ~cmsphedex/spacemon that does just this. (env_setup.sh)
+Fire off the upload:
+
+    spacecount posix --dump dumpfile.1423752361.txt --node=T2_US_Nebraska
+
+Here is where the dumpfile name has to have the epoch date in the middle.  If the name isn't correct it'll fail.  This step also requires that a proxy be present in the expected place (/tmp/x509up_u32007).
+
+This should finish with a success.  Then?  Update the Spacemon twiki to the new upload date.
